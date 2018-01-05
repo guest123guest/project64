@@ -23,22 +23,6 @@ echo copy Common
 xcopy "%base_dir%/Source/Common" "%base_dir%/Android/jni/Common/" /D /I /F /Y /E
 IF %ERRORLEVEL% NEQ 0 (exit /B 1)
 
-echo copy Glide64
-xcopy "%base_dir%/Source/Glide64" "%base_dir%/Android/jni/Glide64/" /D /I /F /Y /E
-IF %ERRORLEVEL% NEQ 0 (exit /B 1)
-
-echo copy GlideHQ
-xcopy "%base_dir%/Source/GlideHQ" "%base_dir%/Android/jni/GlideHQ/" /D /I /F /Y /E
-IF %ERRORLEVEL% NEQ 0 (exit /B 1)
-
-echo copy Glitch64
-xcopy "%base_dir%/Source/Glitch64" "%base_dir%/Android/jni/Glitch64/" /D /I /F /Y /E
-IF %ERRORLEVEL% NEQ 0 (exit /B 1)
-
-echo copy PluginAudio
-xcopy "%base_dir%/Source/Android/PluginAudio" "%base_dir%/Android/jni/PluginAudio/" /D /I /F /Y /E
-IF %ERRORLEVEL% NEQ 0 (exit /B 1)
-
 echo copy PluginInput
 xcopy "%base_dir%/Source/Android/PluginInput" "%base_dir%/Android/jni/PluginInput/" /D /I /F /Y /E
 IF %ERRORLEVEL% NEQ 0 (exit /B 1)
@@ -51,8 +35,16 @@ echo copy Project64-bridge
 xcopy "%base_dir%/Source/Android/Bridge" "%base_dir%/Android/jni/Project64-bridge/" /D /I /F /Y /E
 IF %ERRORLEVEL% NEQ 0 (exit /B 1)
 
+echo copy Project64-audio
+xcopy "%base_dir%/Source/Project64-audio" "%base_dir%/Android/jni/Project64-audio/" /D /I /F /Y /E
+IF %ERRORLEVEL% NEQ 0 (exit /B 1)
+
 echo copy Project64-core
 xcopy "%base_dir%/Source/Project64-core" "%base_dir%/Android/jni/Project64-core/" /D /I /F /Y /E
+IF %ERRORLEVEL% NEQ 0 (exit /B 1)
+
+echo copy Project64-video
+xcopy "%base_dir%/Source/Project64-video" "%base_dir%/Android/jni/Project64-video/" /D /I /F /Y /E
 IF %ERRORLEVEL% NEQ 0 (exit /B 1)
 
 echo copy Settings

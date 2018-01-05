@@ -24,16 +24,20 @@ Filename: "{app}\Project64.exe"; Description: "{cm:LaunchProgram,{#StringChange(
 
 [Files]
 Source: "{#BaseDir}\Bin\{#Configuration}\Project64.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#BaseDir}\Config\Glide64.rdb"; DestDir: "{app}\Config"
+Source: "{#BaseDir}\Config\Video.rdb"; DestDir: "{app}\Config"
+Source: "{#BaseDir}\Config\Audio.rdb"; DestDir: "{app}\Config"
 Source: "{#BaseDir}\Config\Project64.cht"; DestDir: "{app}\Config"
 Source: "{#BaseDir}\Config\Project64.rdb"; DestDir: "{app}\Config"
 Source: "{#BaseDir}\Config\Project64.rdx"; DestDir: "{app}\Config"
 Source: "{#BaseDir}\Lang\*.pj.Lang"; DestDir: "{app}\Lang"
 Source: "{#BaseDir}\Plugin\Audio\Jabo_Dsound.dll"; DestDir: "{app}\Plugin\Audio"
+Source: "{#BaseDir}\Plugin\Audio\Project64-Audio.dll"; DestDir: "{app}\Plugin\Audio"
 Source: "{#BaseDir}\Plugin\GFX\Jabo_Direct3D8.dll"; DestDir: "{app}\Plugin\GFX"
-Source: "{#BaseDir}\Plugin\GFX\PJ64Glide64.dll"; DestDir: "{app}\Plugin\GFX"
+Source: "{#BaseDir}\Plugin\GFX\Project64-Video.dll"; DestDir: "{app}\Plugin\GFX"
 Source: "{#BaseDir}\Plugin\Input\PJ64_NRage.dll"; DestDir: "{app}\Plugin\Input"
 Source: "{#BaseDir}\Plugin\RSP\RSP 1.7.dll"; DestDir: "{app}\Plugin\RSP"
+Source: "{#BaseDir}\Scripts\example.js"; DestDir: "{app}\Scripts"
+Source: "{#BaseDir}\apidoc.htm"; DestDir: "{app}\apidoc.htm"
 
 [Dirs]
 Name: "{app}\Config"; Permissions: everyone-full

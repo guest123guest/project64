@@ -13,7 +13,7 @@
 #include <Project64-core/3rdParty/zip.h>
 #include <Project64-core/N64System/Recompiler/RecompilerCodeLog.h>
 #include <Project64-core/N64System/SystemGlobals.h>
-#include <Project64-core/N64System/Mips/Mempak.H>
+#include <Project64-core/N64System/Mips/Mempak.h>
 #include <Project64-core/N64System/Mips/Transferpak.h>
 #include <Project64-core/N64System/Interpreter/InterpreterCPU.h>
 #include <Project64-core/N64System/Mips/OpcodeName.h>
@@ -30,7 +30,7 @@
 
 #pragma warning(disable:4355) // Disable 'this' : used in base member initializer list
 
-CN64System::CN64System(CPlugins * Plugins, bool SavesReadOnly, bool SyncSystem) :
+CN64System::CN64System(CPlugins * Plugins, uint32_t randomizer_seed, bool SavesReadOnly, bool SyncSystem) :
     CSystemEvents(this, Plugins),
     m_EndEmulation(false),
     m_SaveUsing((SAVE_CHIP_TYPE)g_Settings->LoadDword(Game_SaveChip)),
@@ -38,14 +38,14 @@ CN64System::CN64System(CPlugins * Plugins, bool SavesReadOnly, bool SyncSystem) 
     m_SyncCPU(NULL),
     m_SyncPlugins(NULL),
     m_MMU_VM(SavesReadOnly),
+    m_Cheats(m_MMU_VM),
     m_TLB(this),
     m_Reg(this, this),
     m_Recomp(NULL),
     m_InReset(false),
     m_NextTimer(0),
-    m_SystemTimer(m_NextTimer),
+    m_SystemTimer(m_Reg, m_NextTimer),
     m_bCleanFrameBox(true),
-    m_bInitialized(false),
     m_RspBroke(true),
     m_DMAUsed(false),
     m_TestTimer(false),
@@ -57,9 +57,12 @@ CN64System::CN64System(CPlugins * Plugins, bool SavesReadOnly, bool SyncSystem) 
     m_thread(NULL),
     m_hPauseEvent(true),
     m_CheatsSlectionChanged(false),
-    m_SyncCpu(SyncSystem)
+    m_SyncCpu(SyncSystem),
+    m_Random(randomizer_seed)
 {
     WriteTrace(TraceN64System, TraceDebug, "Start");
+    memset(m_LastSuccessSyncPC, 0, sizeof(m_LastSuccessSyncPC));
+
     uint32_t gameHertz = g_Settings->LoadDword(Game_ScreenHertz);
     if (gameHertz == 0)
     {
@@ -70,6 +73,24 @@ CN64System::CN64System(CPlugins * Plugins, bool SavesReadOnly, bool SyncSystem) 
     m_Cheats.LoadCheats(!g_Settings->LoadDword(Setting_RememberCheats), Plugins);
     WriteTrace(TraceN64System, TraceDebug, "Setting up system");
     CInterpreterCPU::BuildCPU();
+
+    if (!m_MMU_VM.Initialize(SyncSystem))
+    {
+        WriteTrace(TraceN64System, TraceWarning, "MMU failed to Initialize");
+        WriteTrace(TraceN64System, TraceDebug, "Done");
+        return;
+    }
+
+    WriteTrace(TraceN64System, TraceDebug, "Reseting Plugins");
+    g_Notify->DisplayMessage(5, MSG_PLUGIN_INIT);
+    m_Plugins->CreatePlugins();
+    bool bRes = m_Plugins->Initiate(this);
+    if (!bRes)
+    {
+        WriteTrace(TraceN64System, TraceError, "g_Plugins->Initiate Failed");
+        WriteTrace(TraceN64System, TraceDebug, "Done (Res: false)");
+        return;
+    }
 
     if (!SyncSystem)
     {
@@ -90,14 +111,23 @@ CN64System::CN64System(CPlugins * Plugins, bool SavesReadOnly, bool SyncSystem) 
             g_Plugins->CopyPlugins(g_Settings->LoadStringVal(Directory_PluginSync));
             m_SyncPlugins = new CPlugins(Directory_PluginSync, true);
             m_SyncPlugins->SetRenderWindows(g_Plugins->SyncWindow(), NULL);
-            m_SyncCPU = new CN64System(m_SyncPlugins, true, true);
+            m_SyncCPU = new CN64System(m_SyncPlugins, randomizer_seed, true, true);
         }
+
+        Reset(true, true);
 
         if (CpuType == CPU_Recompiler || CpuType == CPU_SyncCores)
         {
-            m_Recomp = new CRecompiler(m_Reg, m_EndEmulation);
+            m_Recomp = new CRecompiler(m_MMU_VM, m_Reg, m_EndEmulation);
+        }
+
+        if (g_Settings->LoadBool(Game_LoadSaveAtStart))
+        {
+            LoadState();
+            g_Settings->SaveBool(Game_LoadSaveAtStart, false);
         }
     }
+
     WriteTrace(TraceN64System, TraceDebug, "Done");
 }
 
@@ -131,11 +161,14 @@ CN64System::~CN64System()
 
 void CN64System::ExternalEvent(SystemEvent action)
 {
+    WriteTrace(TraceN64System, TraceDebug, "action: %s", SystemEventName(action));
+
     if (action == SysEvent_LoadMachineState &&
         !g_Settings->LoadBool(GameRunning_CPU_Running) &&
         g_BaseSystem != NULL &&
         g_BaseSystem->LoadState())
     {
+        WriteTrace(TraceN64System, TraceDebug, "ignore event, manualy loaded save");
         return;
     }
 
@@ -144,6 +177,7 @@ void CN64System::ExternalEvent(SystemEvent action)
         g_BaseSystem != NULL &&
         g_BaseSystem->SaveState())
     {
+        WriteTrace(TraceN64System, TraceDebug, "ignore event, manualy saved event");
         return;
     }
 
@@ -231,12 +265,6 @@ void CN64System::ExternalEvent(SystemEvent action)
         break;
     case SysEvent_ResumeCPU_Cheats:
         if (g_Settings->LoadDword(GameRunning_CPU_PausedType) == PauseType_Cheats)
-        {
-            m_hPauseEvent.Trigger();
-        }
-        break;
-    case SysEvent_ResumeCPU_Enhancements:
-        if (g_Settings->LoadDword(GameRunning_CPU_PausedType) == PauseType_Enhancement)
         {
             m_hPauseEvent.Trigger();
         }
@@ -332,7 +360,7 @@ bool CN64System::RunFileImage(const char * FileLoc)
 void CN64System::RunLoadedImage(void)
 {
     WriteTrace(TraceN64System, TraceDebug, "Start");
-    g_BaseSystem = new CN64System(g_Plugins, false, false);
+    g_BaseSystem = new CN64System(g_Plugins, (uint32_t)time(NULL), false, false);
     if (g_BaseSystem)
     {
         g_BaseSystem->StartEmulation(true);
@@ -448,6 +476,7 @@ bool CN64System::RunDiskImage(const char * FileLoc)
 void CN64System::CloseSystem()
 {
     WriteTrace(TraceN64System, TraceDebug, "Start");
+    g_Settings->SaveBool(Game_FullSpeed, true);
     if (g_BaseSystem)
     {
         g_BaseSystem->CloseCpu();
@@ -681,10 +710,6 @@ void CN64System::Reset(bool bInitReg, bool ClearMenory)
     }
     if (m_Plugins && g_Settings->LoadBool(GameRunning_CPU_Running))
     {
-        if (g_Settings->LoadBool(Plugin_ForceGfxReset))
-        {
-            m_Plugins->Reset(this);
-        }
         m_Plugins->RomClosed();
         m_Plugins->RomOpened();
     }
@@ -693,12 +718,12 @@ void CN64System::Reset(bool bInitReg, bool ClearMenory)
         m_SyncCPU->Reset(bInitReg, ClearMenory);
     }
     g_Settings->SaveBool(GameRunning_InReset, true);
+
     WriteTrace(TraceN64System, TraceDebug, "Done");
 }
 
 bool CN64System::SetActiveSystem(bool bActive)
 {
-    bool bInitPlugin = false;
     bool bReset = false;
     bool bRes = true;
 
@@ -741,19 +766,7 @@ bool CN64System::SetActiveSystem(bool bActive)
         R4300iOp::m_TestTimer = m_TestTimer;
         R4300iOp::m_NextInstruction = m_NextInstruction;
         R4300iOp::m_JumpToLocation = m_JumpToLocation;
-
-        if (!m_bInitialized)
-        {
-            if (!m_MMU_VM.Initialize())
-            {
-                WriteTrace(TraceN64System, TraceWarning, "MMU failed to Initialize");
-                WriteTrace(TraceN64System, TraceDebug, "Done (Res: false)");
-                return false;
-            }
-            bReset = true;
-            m_bInitialized = true;
-            bInitPlugin = true;
-        }
+        g_Random = &m_Random;
     }
     else
     {
@@ -773,27 +786,10 @@ bool CN64System::SetActiveSystem(bool bActive)
             g_Plugins = m_Plugins;
             g_TLBLoadAddress = NULL;
             g_TLBStoreAddress = NULL;
+            g_Random = NULL;
         }
     }
 
-    if (bInitPlugin)
-    {
-        WriteTrace(TraceN64System, TraceDebug, "Reseting Plugins");
-        g_Notify->DisplayMessage(5, MSG_PLUGIN_INIT);
-        m_Plugins->CreatePlugins();
-        bRes = m_Plugins->Initiate(this);
-        if (!bRes)
-        {
-            WriteTrace(TraceN64System, TraceError, "g_Plugins->Initiate Failed");
-            WriteTrace(TraceN64System, TraceDebug, "Done (Res: false)");
-            return false;
-        }
-    }
-
-    if (bReset)
-    {
-        Reset(true, true);
-    }
     return bRes;
 }
 
@@ -1015,7 +1011,18 @@ void CN64System::ExecuteCPU()
     _controlfp(_PC_53, _MCW_PC);
 #endif
 
-    switch ((CPU_TYPE)g_Settings->LoadDword(Game_CpuType))
+    CPU_TYPE cpuType;
+
+    if (g_Settings->LoadBool(Setting_ForceInterpreterCPU))
+    {
+        cpuType = CPU_Interpreter;
+    }
+    else
+    {
+        cpuType = (CPU_TYPE)g_Settings->LoadDword(Game_CpuType);
+    }
+
+    switch (cpuType)
     {
     case CPU_Recompiler: ExecuteRecompiler(); break;
     case CPU_SyncCores:  ExecuteSyncCPU();    break;
@@ -1592,6 +1599,7 @@ bool CN64System::SaveState()
     }
     else
     {
+        WriteTrace(TraceN64System, TraceDebug, "SaveFile: %s", (const char *)SaveFile);
         ExtraInfo.Delete();
         SaveFile.Delete();
         CFile hSaveFile(SaveFile, CFileBase::modeWrite | CFileBase::modeCreate);
@@ -1625,7 +1633,7 @@ bool CN64System::SaveState()
         hSaveFile.Write(m_Reg.m_Peripheral_Interface, sizeof(uint32_t) * 13);
         hSaveFile.Write(m_Reg.m_RDRAM_Interface, sizeof(uint32_t) * 8);
         hSaveFile.Write(m_Reg.m_SerialInterface, sizeof(uint32_t) * 4);
-        hSaveFile.Write(&g_TLB->TlbEntry(0), sizeof(CTLB::TLB_ENTRY) * 32);
+        hSaveFile.Write(&m_TLB.TlbEntry(0), sizeof(CTLB::TLB_ENTRY) * 32);
         hSaveFile.Write(g_MMU->PifRam(), 0x40);
         hSaveFile.Write(g_MMU->Rdram(), RdramSize);
         hSaveFile.Write(g_MMU->Dmem(), 0x1000);
@@ -1724,9 +1732,9 @@ bool CN64System::LoadState(const char * FileName)
 
     uint32_t Value, SaveRDRAMSize, NextVITimer = 0, old_status, old_width, old_dacrate;
     bool LoadedZipFile = false, AudioResetOnLoad;
-    old_status = g_Reg->VI_STATUS_REG;
-    old_width = g_Reg->VI_WIDTH_REG;
-    old_dacrate = g_Reg->AI_DACRATE_REG;
+    old_status = m_Reg.VI_STATUS_REG;
+    old_width = m_Reg.VI_WIDTH_REG;
+    old_dacrate = m_Reg.AI_DACRATE_REG;
 
     CPath SaveFile(FileName);
 
@@ -1782,8 +1790,8 @@ bool CN64System::LoadState(const char * FileName)
                 }
                 Reset(false, true);
 
-                g_MMU->UnProtectMemory(0x80000000, 0x80000000 + g_Settings->LoadDword(Game_RDRamSize) - 4);
-                g_MMU->UnProtectMemory(0xA4000000, 0xA4001FFC);
+                m_MMU_VM.UnProtectMemory(0x80000000, 0x80000000 + g_Settings->LoadDword(Game_RDRamSize) - 4);
+                m_MMU_VM.UnProtectMemory(0xA4000000, 0xA4001FFC);
                 g_Settings->SaveDword(Game_RDRamSize, SaveRDRAMSize);
                 unzReadCurrentFile(file, &NextVITimer, sizeof(NextVITimer));
                 unzReadCurrentFile(file, &m_Reg.m_PROGRAM_COUNTER, sizeof(m_Reg.m_PROGRAM_COUNTER));
@@ -1802,7 +1810,7 @@ bool CN64System::LoadState(const char * FileName)
                 unzReadCurrentFile(file, m_Reg.m_Peripheral_Interface, sizeof(uint32_t) * 13);
                 unzReadCurrentFile(file, m_Reg.m_RDRAM_Interface, sizeof(uint32_t) * 8);
                 unzReadCurrentFile(file, m_Reg.m_SerialInterface, sizeof(uint32_t) * 4);
-                unzReadCurrentFile(file, (void *const)&g_TLB->TlbEntry(0), sizeof(CTLB::TLB_ENTRY) * 32);
+                unzReadCurrentFile(file, (void *const)&m_TLB.TlbEntry(0), sizeof(CTLB::TLB_ENTRY) * 32);
                 unzReadCurrentFile(file, m_MMU_VM.PifRam(), 0x40);
                 unzReadCurrentFile(file, m_MMU_VM.Rdram(), SaveRDRAMSize);
                 unzReadCurrentFile(file, m_MMU_VM.Dmem(), 0x1000);
@@ -1869,7 +1877,7 @@ bool CN64System::LoadState(const char * FileName)
         hSaveFile.Read(m_Reg.m_Peripheral_Interface, sizeof(uint32_t) * 13);
         hSaveFile.Read(m_Reg.m_RDRAM_Interface, sizeof(uint32_t) * 8);
         hSaveFile.Read(m_Reg.m_SerialInterface, sizeof(uint32_t) * 4);
-        hSaveFile.Read((void *const)&g_TLB->TlbEntry(0), sizeof(CTLB::TLB_ENTRY) * 32);
+        hSaveFile.Read((void *const)&m_TLB.TlbEntry(0), sizeof(CTLB::TLB_ENTRY) * 32);
         hSaveFile.Read(m_MMU_VM.PifRam(), 0x40);
         hSaveFile.Read(m_MMU_VM.Rdram(), SaveRDRAMSize);
         hSaveFile.Read(m_MMU_VM.Dmem(), 0x1000);
@@ -1892,24 +1900,24 @@ bool CN64System::LoadState(const char * FileName)
     {
         m_Reg.m_AudioIntrReg |= MI_INTR_AI;
         m_Reg.AI_STATUS_REG &= ~AI_STATUS_FIFO_FULL;
-        g_Reg->MI_INTR_REG |= MI_INTR_AI;
+        m_Reg.MI_INTR_REG |= MI_INTR_AI;
     }
 
     if (bFixedAudio())
     {
-        m_Audio.SetFrequency(m_Reg.AI_DACRATE_REG, g_System->SystemType());
+        m_Audio.SetFrequency(m_Reg.AI_DACRATE_REG, SystemType());
     }
 
-    if (old_status != g_Reg->VI_STATUS_REG)
+    if (old_status != m_Reg.VI_STATUS_REG)
     {
         g_Plugins->Gfx()->ViStatusChanged();
     }
 
-    if (old_width != g_Reg->VI_WIDTH_REG)
+    if (old_width != m_Reg.VI_WIDTH_REG)
     {
         g_Plugins->Gfx()->ViWidthChanged();
     }
-    g_Plugins->Audio()->DacrateChanged(g_System->SystemType());
+    g_Plugins->Audio()->DacrateChanged(SystemType());
 
     //Fix Random Register
     while ((int)m_Reg.RANDOM_REGISTER < (int)m_Reg.WIRED_REGISTER)
@@ -1917,27 +1925,21 @@ bool CN64System::LoadState(const char * FileName)
         m_Reg.RANDOM_REGISTER += 32 - m_Reg.WIRED_REGISTER;
     }
     //Fix up timer
-    WriteTrace(TraceN64System, TraceDebug, "2");
     m_SystemTimer.SetTimer(CSystemTimer::CompareTimer, m_Reg.COMPARE_REGISTER - m_Reg.COUNT_REGISTER, false);
     m_SystemTimer.SetTimer(CSystemTimer::ViTimer, NextVITimer, false);
     m_Reg.FixFpuLocations();
-    WriteTrace(TraceN64System, TraceDebug, "5");
     m_TLB.Reset(false);
-    WriteTrace(TraceN64System, TraceDebug, "6");
     if (m_Recomp)
     {
         m_Recomp->ResetFunctionTimes();
     }
     m_CPU_Usage.ResetTimers();
-    WriteTrace(TraceN64System, TraceDebug, "8");
     m_FPS.Reset(true);
-    WriteTrace(TraceN64System, TraceDebug, "9");
     if (bRecordRecompilerAsm())
     {
         Stop_Recompiler_Log();
         Start_Recompiler_Log();
     }
-    WriteTrace(TraceN64System, TraceDebug, "Done");
 
 #ifdef TEST_SP_TRACKING
     m_CurrentSP = GPR[29].UW[0];
@@ -1958,7 +1960,6 @@ bool CN64System::LoadState(const char * FileName)
             SyncCPU(m_SyncCPU);
         }
     }
-    WriteTrace(TraceN64System, TraceDebug, "13");
     std::string LoadMsg = g_Lang->GetString(MSG_LOADED_STATE);
     g_Notify->DisplayMessage(5, stdstr_f("%s %s", LoadMsg.c_str(), stdstr(SaveFile.GetNameExtension()).c_str()).c_str());
     WriteTrace(TraceN64System, TraceDebug, "Done");
@@ -1986,7 +1987,7 @@ void CN64System::RunRSP()
             if (m_RspBroke)
             {
                 g_MMU->LW_VAddr(0xA4000FC0, Task);
-                if (Task == 1 && (m_Reg.DPC_STATUS_REG & DPC_STATUS_FREEZE) != 0)
+                if (Task == 1 && UseHleGfx() && (m_Reg.DPC_STATUS_REG & DPC_STATUS_FREEZE) != 0)
                 {
                     WriteTrace(TraceRSP, TraceDebug, "Dlist that is frozen");
                     return;
@@ -2073,33 +2074,6 @@ void CN64System::RunRSP()
     WriteTrace(TraceRSP, TraceDebug, "Done (SP Status %X)", m_Reg.SP_STATUS_REG);
 }
 
-void CN64System::SyncToAudio()
-{
-    if (!bSyncToAudio() || !bLimitFPS())
-    {
-        return;
-    }
-    PROFILE_TIMERS PreviousTimer = Timer_None;
-    if (bShowCPUPer())
-    {
-        PreviousTimer = m_CPU_Usage.StartTimer(Timer_Idel);
-    }
-
-    for (int i = 0; i < 50; i++)
-    {
-        if (g_Reg->m_AudioIntrReg != 0)
-        {
-            WriteTrace(TraceAudio, TraceDebug, "Audio Interrupt done (%d)", i);
-            break;
-        }
-        pjutil::Sleep(1);
-    }
-    if (bShowCPUPer())
-    {
-        m_CPU_Usage.StartTimer(PreviousTimer);
-    }
-}
-
 void CN64System::RefreshScreen()
 {
     PROFILE_TIMERS CPU_UsageAddr = Timer_None/*, ProfilingAddr = Timer_None*/;
@@ -2143,6 +2117,7 @@ void CN64System::RefreshScreen()
     {
         WriteTrace(TraceGFXPlugin, TraceDebug, "UpdateScreen Starting");
         g_Plugins->Gfx()->UpdateScreen();
+        g_Debugger->FrameDrawn();
         WriteTrace(TraceGFXPlugin, TraceDebug, "UpdateScreen Done");
     }
     __except_catch()
@@ -2151,7 +2126,7 @@ void CN64System::RefreshScreen()
     }
     g_MMU->UpdateFieldSerration((m_Reg.VI_STATUS_REG & 0x40) != 0);
 
-    if ((bBasicMode() || bLimitFPS()) && !bSyncToAudio())
+    if ((bBasicMode() || bLimitFPS()) && (!bSyncToAudio() || !FullSpeed()))
     {
         if (bShowCPUPer()) { m_CPU_Usage.StartTimer(Timer_Idel); }
         uint32_t FrameRate;
@@ -2191,7 +2166,7 @@ void CN64System::RefreshScreen()
             SetCheatsSlectionChanged(false);
             m_Cheats.LoadCheats(false, g_BaseSystem->m_Plugins);
         }
-        m_Cheats.ApplyCheats(g_MMU);
+        m_Cheats.ApplyCheats();
     }
     //    if (bProfiling)    { m_Profile.StartTimer(ProfilingAddr != Timer_None ? ProfilingAddr : Timer_R4300); }
 }

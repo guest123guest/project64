@@ -34,11 +34,13 @@ Thumbs.db
 /ipch
 /Plugin/Audio/AndroidAudio.dll
 /Plugin/Audio/AndroidAudio_d.dll
+/Plugin/Audio/Project64-Audio.dll
+/Plugin/Audio/Project64-Audio_d.dll
 /Plugin/GFX/lib
 /Plugin/GFX/map
 /Plugin/GFX/pdb
-/Plugin/GFX/PJ64Glide64.dll
-/Plugin/GFX/PJ64Glide64_d.dll
+/Plugin/GFX/Project64-Video.dll
+/Plugin/GFX/Project64-Video_d.dll
 /Plugin/Input/lib
 /Plugin/Input/map
 /Plugin/Input/pdb
@@ -56,11 +58,15 @@ Thumbs.db
 /Plugin64/AndroidAudio
 /Plugin64/Audio/AndroidAudio.dll
 /Plugin64/Audio/AndroidAudio_d.dll
+/Plugin64/Audio/Project64-Audio.dll
+/Plugin64/Audio/Project64-Audio_d.dll
 /Plugin64/GFX/lib
 /Plugin64/GFX/map
 /Plugin64/GFX/pdb
 /Plugin64/GFX/PJ64Glide64.dll
 /Plugin64/GFX/PJ64Glide64_d.dll
+/Plugin64/GFX/Project64-Video.dll
+/Plugin64/GFX/Project64-Video_d.dll
 /Plugin64/Input/lib
 /Plugin64/Input/map
 /Plugin64/Input/pdb
@@ -75,10 +81,9 @@ Thumbs.db
 /Plugin64/RSP/RSP_d 1.7.dll
 /Plugin64/RSP/RSP-HLE.dll
 /Plugin64/RSP/RSP-HLE_d.dll
-/Source/3rdParty/wx/lib/vc_lib/msw/wx/setup.h
-/Source/3rdParty/wx/lib/vc_lib/mswd/wx/setup.h
-/Source/3rdParty/wx/lib/vc_lib/mswu/wx/msw/rcdefs.h
-/Source/3rdParty/wx/lib/vc_lib/mswu/wx/setup.h
-/Source/3rdParty/wx/lib/vc_lib/mswud/wx/msw/rcdefs.h
-/Source/3rdParty/wx/lib/vc_lib/mswud/wx/setup.h
+/Source/nragev20/Version.h
+/Source/Project64-audio/Version.h
+/Source/Project64-core/Version.h
+/Source/Project64-video/Version.h
+/Source/RSP/Version.h
 /Save

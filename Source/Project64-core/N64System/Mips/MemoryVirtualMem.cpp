@@ -65,8 +65,8 @@ uint32_t swap32by8(uint32_t word)
         __builtin_bswap32(word)
 #else
         (word & 0x000000FFul) << 24
-        | (word & 0x0000FF00ul) <<  8
-        | (word & 0x00FF0000ul) >>  8
+        | (word & 0x0000FF00ul) << 8
+        | (word & 0x00FF0000ul) >> 8
         | (word & 0xFF000000ul) >> 24
 #endif
         ;
@@ -110,11 +110,8 @@ void CMipsMemoryVM::Reset(bool /*EraseMemory*/)
 
 void CMipsMemoryVM::ReserveMemory()
 {
-    m_Reserve1 = (uint8_t *)AllocateAddressSpace(0x20000000);
-    if (g_Settings->LoadBool(Debugger_Enabled) && g_Settings->LoadBool(Setting_PreAllocSyncMem))
-    {
-        m_Reserve2 = (uint8_t *)AllocateAddressSpace(g_Settings->LoadBool(Setting_ReducedSyncMem) ? 0x04002000 : 0x20000000);
-    }
+    m_Reserve1 = (uint8_t *)AllocateAddressSpace(0x20000000, (void *)g_Settings->LoadDword(Setting_FixedRdramAddress));
+    m_Reserve2 = (uint8_t *)AllocateAddressSpace(0x04002000);
 }
 
 void CMipsMemoryVM::FreeReservedMemory()
@@ -131,19 +128,19 @@ void CMipsMemoryVM::FreeReservedMemory()
     }
 }
 
-bool CMipsMemoryVM::Initialize()
+bool CMipsMemoryVM::Initialize(bool SyncSystem)
 {
     if (m_RDRAM != NULL)
     {
         return true;
     }
 
-    if (m_Reserve1)
+    if (!SyncSystem && m_RDRAM == NULL && m_Reserve1 != NULL)
     {
         m_RDRAM = m_Reserve1;
         m_Reserve1 = NULL;
     }
-    if (m_RDRAM == NULL && m_Reserve2)
+    if (SyncSystem && m_RDRAM == NULL && m_Reserve2 != NULL)
     {
         m_RDRAM = m_Reserve2;
         m_Reserve2 = NULL;
@@ -674,12 +671,12 @@ bool CMipsMemoryVM::LW_NonMemory(uint32_t PAddr, uint32_t* Value)
     if (PAddr >= CFBStart && PAddr < CFBEnd)
     {
         uint32_t OldProtect;
-        VirtualProtect(m_RDRAM+(PAddr & ~0xFFF),0xFFC,PAGE_READONLY, &OldProtect);
+        VirtualProtect(m_RDRAM + (PAddr & ~0xFFF), 0xFFC, PAGE_READONLY, &OldProtect);
         if (FrameBufferRead)
         {
             FrameBufferRead(PAddr & ~0xFFF);
         }
-        *Value = *(uint32_t *)(m_RDRAM+PAddr);
+        *Value = *(uint32_t *)(m_RDRAM + PAddr);
         return true;
     }
 #endif

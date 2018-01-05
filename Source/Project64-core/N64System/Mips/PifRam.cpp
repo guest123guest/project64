@@ -19,7 +19,7 @@
 #include <Project64-core/N64System/N64Class.h>
 #include <Project64-core/N64System/Mips/Transferpak.h>
 #include <Project64-core/N64System/Mips/Rumblepak.h>
-#include <Project64-core/N64System/Mips/Mempak.H>
+#include <Project64-core/N64System/Mips/Mempak.h>
 #include <Project64-core/Logging.h>
 
 int32_t CPifRamSettings::m_RefCount = 0;
@@ -358,13 +358,14 @@ void CPifRam::SI_DMA_READ()
 
     if (g_System->bDelaySI())
     {
-        g_SystemTimer->SetTimer(CSystemTimer::SiTimer, 0x900, false);
+        g_SystemTimer->SetTimer(CSystemTimer::SiTimer, 0x900 + (g_Random->next() % 0x40), false);
     }
     else
     {
-        g_Reg->MI_INTR_REG |= MI_INTR_SI;
-        g_Reg->SI_STATUS_REG |= SI_STATUS_INTERRUPT;
-        g_Reg->CheckInterrupts();
+        g_SystemTimer->SetTimer(CSystemTimer::SiTimer, g_Random->next() % 0x40, false);
+        //g_Reg->MI_INTR_REG |= MI_INTR_SI;
+        //g_Reg->SI_STATUS_REG |= SI_STATUS_INTERRUPT;
+        //g_Reg->CheckInterrupts();
     }
 }
 

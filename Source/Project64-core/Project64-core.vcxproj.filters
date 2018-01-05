@@ -339,9 +339,6 @@
     <ClCompile Include="N64System\Recompiler\Arm\ArmRegInfo.cpp">
       <Filter>Source Files\N64 System\Recompiler\Arm</Filter>
     </ClCompile>
-    <ClCompile Include="Settings\SettingType\SettingsType-Enhancement.cpp">
-      <Filter>Source Files\Settings\SettingType</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -656,8 +653,12 @@
     <ClInclude Include="N64System\Recompiler\x64-86\x64RegInfo.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Settings\SettingType\SettingsType-Enhancement.h">
-      <Filter>Header Files\Settings\SettingType</Filter>
+    <ClInclude Include="Debugger.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ClassDiagram.cd" />
+    <None Include="ClassDiagram1.cd" />
   </ItemGroup>
 </Project>

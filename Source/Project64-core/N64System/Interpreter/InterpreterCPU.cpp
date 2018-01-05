@@ -8,8 +8,10 @@
 * GNU/GPLv2 http://www.gnu.org/licenses/gpl-2.0.html                        *
 *                                                                           *
 ****************************************************************************/
+
 #include "stdafx.h"
 #include "InterpreterCPU.h"
+
 #include <Project64-core/N64System/SystemGlobals.h>
 #include <Project64-core/N64System/N64Class.h>
 #include <Project64-core/N64System/Mips/MemoryVirtualMem.h>
@@ -18,6 +20,7 @@
 #include <Project64-core/Plugins/PluginClass.h>
 #include <Project64-core/Plugins/GFXPlugin.h>
 #include <Project64-core/ExceptionHandler.h>
+#include <Project64-core/Debugger.h>
 
 R4300iOp::Func * CInterpreterCPU::m_R4300i_Opcode = NULL;
 
@@ -94,7 +97,7 @@ bool DelaySlotEffectsCompare(uint32_t PC, uint32_t Reg1, uint32_t Reg2)
         case R4300i_SPECIAL_DDIVU:
             break;
         default:
-            if (g_Settings->LoadBool(Debugger_Enabled))
+            if (CDebugSettings::bHaveDebugger())
             {
                 g_Notify->DisplayError(stdstr_f("Does %s effect Delay slot at %X?", R4300iOpcodeName(Command.Hex, PC + 4), PC).c_str());
             }
@@ -125,7 +128,7 @@ bool DelaySlotEffectsCompare(uint32_t PC, uint32_t Reg1, uint32_t Reg2)
                 case R4300i_COP0_CO_TLBWR: break;
                 case R4300i_COP0_CO_TLBP: break;
                 default:
-                    if (g_Settings->LoadBool(Debugger_Enabled))
+                    if (CDebugSettings::bHaveDebugger())
                     {
                         g_Notify->DisplayError(stdstr_f("Does %s effect Delay slot at %X?\n6", R4300iOpcodeName(Command.Hex, PC + 4), PC).c_str());
                     }
@@ -134,7 +137,7 @@ bool DelaySlotEffectsCompare(uint32_t PC, uint32_t Reg1, uint32_t Reg2)
             }
             else
             {
-                if (g_Settings->LoadBool(Debugger_Enabled))
+                if (CDebugSettings::bHaveDebugger())
                 {
                     g_Notify->DisplayError(stdstr_f("Does %s effect Delay slot at %X?\n7", R4300iOpcodeName(Command.Hex, PC + 4), PC).c_str());
                 }
@@ -163,7 +166,7 @@ bool DelaySlotEffectsCompare(uint32_t PC, uint32_t Reg1, uint32_t Reg2)
         case R4300i_COP1_W: break;
         case R4300i_COP1_L: break;
         default:
-            if (g_Settings->LoadBool(Debugger_Enabled))
+            if (CDebugSettings::bHaveDebugger())
             {
                 g_Notify->DisplayError(stdstr_f("Does %s effect Delay slot at %X?", R4300iOpcodeName(Command.Hex, PC + 4), PC).c_str());
             }
@@ -211,7 +214,7 @@ bool DelaySlotEffectsCompare(uint32_t PC, uint32_t Reg1, uint32_t Reg2)
     case R4300i_SDC1: break;
     case R4300i_SD: break;
     default:
-        if (g_Settings->LoadBool(Debugger_Enabled))
+        if (CDebugSettings::bHaveDebugger())
         {
             g_Notify->DisplayError(stdstr_f("Does %s effect Delay slot at %X?", R4300iOpcodeName(Command.Hex, PC + 4), PC).c_str());
         }
@@ -295,14 +298,25 @@ void CInterpreterCPU::ExecuteCPU()
                 continue;
             }
 
+            if (CDebugSettings::bHaveDebugger() && !g_Debugger->CPUStepStarted())
+            {
+                // Skip command if instructed by the debugger
+                PROGRAM_COUNTER += 4;
+                continue;
+            }
+
             /* if (PROGRAM_COUNTER > 0x80000300 && PROGRAM_COUNTER < 0x80380000)
             {
             WriteTraceF((TraceType)(TraceError | TraceNoHeader),"%X: %s",*_PROGRAM_COUNTER,R4300iOpcodeName(Opcode.Hex,*_PROGRAM_COUNTER));
             // WriteTraceF((TraceType)(TraceError | TraceNoHeader),"%X: %s t9: %08X v1: %08X",*_PROGRAM_COUNTER,R4300iOpcodeName(Opcode.Hex,*_PROGRAM_COUNTER),_GPR[0x19].UW[0],_GPR[0x03].UW[0]);
             // WriteTraceF((TraceType)(TraceError | TraceNoHeader),"%X: %d %d",*_PROGRAM_COUNTER,*g_NextTimer,g_SystemTimer->CurrentType());
             } */
+
             m_R4300i_Opcode[Opcode.op]();
+            _GPR[0].DW = 0; /* MIPS $zero hard-wired to 0 */
             NextTimer -= CountPerOp;
+
+            if (CDebugSettings::bHaveDebugger()) { g_Debugger->CPUStep(); }
 
             PROGRAM_COUNTER += 4;
             switch (R4300iOp::m_NextInstruction)

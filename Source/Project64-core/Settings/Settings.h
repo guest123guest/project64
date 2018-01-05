@@ -31,8 +31,10 @@ enum SettingID
     SupportFile_SettingsDefault,
     SupportFile_RomDatabase,
     SupportFile_RomDatabaseDefault,
-    SupportFile_Glide64RDB,
-    SupportFile_Glide64RDBDefault,
+    SupportFile_VideoRDB,
+    SupportFile_VideoRDBDefault,
+    SupportFile_AudioRDB,
+    SupportFile_AudioRDBDefault,
     SupportFile_Cheats,
     SupportFile_CheatsDefault,
     SupportFile_Enhancements,
@@ -50,6 +52,8 @@ enum SettingID
     Setting_AutoStart,
     Setting_CheckEmuRunning,
     Setting_EraseGameDefaults,
+    Setting_ForceInterpreterCPU,
+    Setting_FixedRdramAddress,
 
     Setting_AutoZipInstantSave,
     Setting_RememberCheats,
@@ -58,8 +62,6 @@ enum SettingID
     Setting_LanguageDirDefault,
     Setting_CurrentLanguage,
     Setting_EnableDisk,
-    Setting_PreAllocSyncMem,
-    Setting_ReducedSyncMem,
 
     //RDB Settings
     Rdb_GoodName,
@@ -98,6 +100,7 @@ enum SettingID
     Rdb_AudioResetOnLoad,
     Rdb_AllowROMWrites,
     Rdb_CRC_Recalc,
+    Rdb_OverClockModifier,
 
     //Individual Game Settings
     Game_IniKey,
@@ -150,6 +153,9 @@ enum SettingID
     Game_CRC_Recalc,
     Game_Transferpak_ROM,
     Game_Transferpak_Sav,
+    Game_LoadSaveAtStart,
+    Game_OverClockModifier,
+    Game_FullSpeed,
 
     // General Game running info
     GameRunning_LoadingInProgress,
@@ -225,6 +231,7 @@ enum SettingID
     Debugger_ShowRecompMemSize,
     Debugger_DebugLanguage,
     Debugger_RecordExecutionTimes,
+    Debugger_HaveExecutionBP,
 
     //Trace
     Debugger_TraceMD5,
@@ -262,7 +269,6 @@ enum SettingID
     Plugin_UseHleGfx,
     Plugin_UseHleAudio,
     Plugin_EnableAudio,
-    Plugin_ForceGfxReset,
 
     Logging_GenerateLog,
     Logging_LogRDRamRegisters,

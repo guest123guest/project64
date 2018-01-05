@@ -95,8 +95,10 @@ void CSettings::AddHowToHandleSetting(const char * BaseDirectory)
     AddHandler(SupportFile_SettingsDefault, new CSettingTypeRelativePath("Config", "Project64.cfg"));
     AddHandler(SupportFile_RomDatabase, new CSettingTypeApplicationPath("", "RomDatabase", SupportFile_RomDatabaseDefault));
     AddHandler(SupportFile_RomDatabaseDefault, new CSettingTypeRelativePath("Config", "Project64.rdb"));
-    AddHandler(SupportFile_Glide64RDB, new CSettingTypeApplicationPath("", "Glide64RDB", SupportFile_Glide64RDBDefault));
-    AddHandler(SupportFile_Glide64RDBDefault, new CSettingTypeRelativePath("Config", "Glide64.rdb"));
+    AddHandler(SupportFile_VideoRDB, new CSettingTypeApplicationPath("", "VideoRDB", SupportFile_VideoRDBDefault));
+    AddHandler(SupportFile_VideoRDBDefault, new CSettingTypeRelativePath("Config", "Video.rdb"));
+    AddHandler(SupportFile_AudioRDB, new CSettingTypeApplicationPath("", "AudioRDB", SupportFile_AudioRDBDefault));
+    AddHandler(SupportFile_AudioRDBDefault, new CSettingTypeRelativePath("Config", "Audio.rdb"));
     AddHandler(SupportFile_Cheats, new CSettingTypeApplicationPath("", "Cheats", SupportFile_CheatsDefault));
     AddHandler(SupportFile_CheatsDefault, new CSettingTypeRelativePath("Config", "Project64.cht"));
     AddHandler(SupportFile_Enhancements, new CSettingTypeApplicationPath("", "Enhancements", SupportFile_EnhancementsDefault));
@@ -115,6 +117,8 @@ void CSettings::AddHowToHandleSetting(const char * BaseDirectory)
     AddHandler(Setting_AutoZipInstantSave, new CSettingTypeApplication("", "Auto Zip Saves", (uint32_t)true));
     AddHandler(Setting_EraseGameDefaults, new CSettingTypeApplication("", "Erase on default", (uint32_t)true));
     AddHandler(Setting_CheckEmuRunning, new CSettingTypeApplication("", "Check Running", (uint32_t)true));
+    AddHandler(Setting_ForceInterpreterCPU, new CSettingTypeApplication("", "Force Interpreter CPU", false));
+    AddHandler(Setting_FixedRdramAddress, new CSettingTypeApplication("", "Fixed Rdram Address", (uint32_t)0));
 
     AddHandler(Setting_RememberCheats, new CSettingTypeApplication("", "Remember Cheats", (uint32_t)false));
 #ifdef ANDROID
@@ -124,8 +128,6 @@ void CSettings::AddHowToHandleSetting(const char * BaseDirectory)
 #endif
     AddHandler(Setting_CurrentLanguage, new CSettingTypeApplication("", "Current Language", ""));
     AddHandler(Setting_EnableDisk, new CSettingTypeTempBool(false));
-    AddHandler(Setting_PreAllocSyncMem, new CSettingTypeApplication("", "PreAllocSyncMem", true));
-    AddHandler(Setting_ReducedSyncMem, new CSettingTypeApplication("", "ReducedSyncMem", false));
     AddHandler(Setting_LanguageDirDefault, new CSettingTypeRelativePath("Lang", ""));
     AddHandler(Setting_LanguageDir, new CSettingTypeApplicationPath("Lang Directory", "Directory", Setting_LanguageDirDefault));
 
@@ -144,7 +146,7 @@ void CSettings::AddHowToHandleSetting(const char * BaseDirectory)
     AddHandler(Rdb_32Bit, new CSettingTypeRDBYesNo("32bit", true));
     AddHandler(Rdb_FastSP, new CSettingTypeRDBYesNo("Fast SP", true));
     AddHandler(Rdb_FixedAudio, new CSettingTypeRomDatabase("Fixed Audio", true));
-    AddHandler(Rdb_SyncViaAudio, new CSettingTypeRomDatabase("Sync Audio", false));
+    AddHandler(Rdb_SyncViaAudio, new CSettingTypeRomDatabase("Audio-Sync Audio", true));
     AddHandler(Rdb_RspAudioSignal, new CSettingTypeRDBYesNo("Audio Signal", false));
     AddHandler(Rdb_TLB_VAddrStart, new CSettingTypeRomDatabase("TLB: Vaddr Start", 0));
     AddHandler(Rdb_TLB_VAddrLen, new CSettingTypeRomDatabase("TLB: Vaddr Len", 0));
@@ -169,6 +171,7 @@ void CSettings::AddHowToHandleSetting(const char * BaseDirectory)
     AddHandler(Rdb_AudioResetOnLoad, new CSettingTypeRDBYesNo("AudioResetOnLoad", false));
     AddHandler(Rdb_AllowROMWrites, new CSettingTypeRDBYesNo("AllowROMWrites", false));
     AddHandler(Rdb_CRC_Recalc, new CSettingTypeRDBYesNo("CRC-Recalc", false));
+    AddHandler(Rdb_OverClockModifier, new CSettingTypeRomDatabase("OverClockModifier", 1));
 
     AddHandler(Game_IniKey, new CSettingTypeTempString(""));
     AddHandler(Game_File, new CSettingTypeTempString(""));
@@ -224,6 +227,9 @@ void CSettings::AddHowToHandleSetting(const char * BaseDirectory)
     AddHandler(Game_CRC_Recalc, new CSettingTypeGame("CRC-Recalc", Rdb_CRC_Recalc));
     AddHandler(Game_Transferpak_ROM, new CSettingTypeGame("Tpak-ROM-dir", Default_None));
     AddHandler(Game_Transferpak_Sav, new CSettingTypeGame("Tpak-Sav-dir", Default_None));
+    AddHandler(Game_LoadSaveAtStart, new CSettingTypeTempBool(false));
+    AddHandler(Game_OverClockModifier, new CSettingTypeGame("OverClockModifier", Rdb_OverClockModifier));
+    AddHandler(Game_FullSpeed, new CSettingTypeTempBool(true, "Full Speed"));
 
     //User Interface
     AddHandler(UserInterface_ShowCPUPer, new CSettingTypeApplication("", "Display CPU Usage", (uint32_t)false));
@@ -296,7 +302,7 @@ void CSettings::AddHowToHandleSetting(const char * BaseDirectory)
     AddHandler(GameRunning_CPU_Paused, new CSettingTypeTempBool(false));
     AddHandler(GameRunning_CPU_PausedType, new CSettingTypeTempNumber(Default_None));
     AddHandler(GameRunning_InstantSaveFile, new CSettingTypeTempString(""));
-    AddHandler(GameRunning_LimitFPS, new CSettingTypeTempBool(true));
+    AddHandler(GameRunning_LimitFPS, new CSettingTypeTempBool(true, "Limit FPS"));
     AddHandler(GameRunning_ScreenHertz, new CSettingTypeTempNumber(60));
     AddHandler(GameRunning_InReset, new CSettingTypeTempBool(false));
 
@@ -311,6 +317,7 @@ void CSettings::AddHowToHandleSetting(const char * BaseDirectory)
     AddHandler(Debugger_ShowDListAListCount, new CSettingTypeApplication("Debugger", "Show Dlist Alist Count", false));
     AddHandler(Debugger_ShowRecompMemSize, new CSettingTypeApplication("Debugger", "Show Recompiler Memory size", false));
     AddHandler(Debugger_RecordExecutionTimes, new CSettingTypeApplication("Debugger", "Record Execution Times", false));
+    AddHandler(Debugger_HaveExecutionBP, new CSettingTypeTempBool(false));
     AddHandler(Debugger_DebugLanguage, new CSettingTypeApplication("Debugger", "Debug Language", false));
     AddHandler(Debugger_ShowDivByZero, new CSettingTypeApplication("Debugger", "Show Div by zero", false));
     AddHandler(Debugger_AppLogFlush, new CSettingTypeApplication("Logging", "Log Auto Flush", (uint32_t)false));
@@ -344,11 +351,15 @@ void CSettings::AddHowToHandleSetting(const char * BaseDirectory)
 #ifdef _WIN32
     AddHandler(Plugin_RSP_Current, new CSettingTypeApplication("Plugin", "RSP Dll", "RSP\\RSP 1.7.dll"));
     AddHandler(Plugin_GFX_Current, new CSettingTypeApplication("Plugin", "Graphics Dll", "GFX\\Jabo_Direct3D8.dll"));
-    AddHandler(Plugin_AUDIO_Current, new CSettingTypeApplication("Plugin", "Audio Dll", "Audio\\Jabo_Dsound.dll"));
+#ifdef _DEBUG
+    AddHandler(Plugin_AUDIO_Current, new CSettingTypeApplication("Plugin", "Audio Dll", "Audio\\Project64-Audio_d.dll"));
+#else
+    AddHandler(Plugin_AUDIO_Current, new CSettingTypeApplication("Plugin", "Audio Dll", "Audio\\Project64-Audio.dll"));
+#endif
     AddHandler(Plugin_CONT_Current, new CSettingTypeApplication("Plugin", "Controller Dll", "Input\\PJ64_NRage.dll"));
 #else
     AddHandler(Plugin_RSP_Current, new CSettingTypeApplication("Plugin", "RSP Dll", "libProject64-rsp-hle.so"));
-    AddHandler(Plugin_GFX_Current, new CSettingTypeApplication("Plugin", "Graphics Dll", "libProject64-gfx-glide64.so"));
+    AddHandler(Plugin_GFX_Current, new CSettingTypeApplication("Plugin", "Graphics Dll", "libProject64-gfx.so"));
     AddHandler(Plugin_AUDIO_Current, new CSettingTypeApplication("Plugin", "Audio Dll", "libProject64-audio-android.so"));
     AddHandler(Plugin_CONT_Current, new CSettingTypeApplication("Plugin", "Controller Dll", "libProject64-input-android.so"));
 #endif
@@ -360,11 +371,7 @@ void CSettings::AddHowToHandleSetting(const char * BaseDirectory)
     AddHandler(Plugin_UseHleGfx, new CSettingTypeApplication("RSP", "HLE GFX", true));
     AddHandler(Plugin_UseHleAudio, new CSettingTypeApplication("RSP", "HLE Audio", false));
     AddHandler(Plugin_EnableAudio, new CSettingTypeApplication("Audio", "Enable Audio", true));
-#ifdef ANDROID
-    AddHandler(Plugin_ForceGfxReset, new CSettingTypeApplication("Plugin", "Force Gfx Reset", true));
-#else
-    AddHandler(Plugin_ForceGfxReset, new CSettingTypeApplication("Plugin", "Force Gfx Reset", false));
-#endif
+
     //Logging
     AddHandler(Logging_GenerateLog, new CSettingTypeApplication("Logging", "Generate Log Files", false));
     AddHandler(Logging_LogRDRamRegisters, new CSettingTypeApplication("Logging", "Log RDRam Registers", false));
@@ -427,7 +434,7 @@ uint32_t CSettings::FindSetting(CSettings * _this, const char * Name)
             }
             return iter->first;
         }
-        if (Setting->GetSettingType() == SettingType_CfgFile)
+        else if (Setting->GetSettingType() == SettingType_CfgFile)
         {
             CSettingTypeApplication * CfgSetting = (CSettingTypeApplication *)Setting;
             if (_stricmp(CfgSetting->GetKeyName(), Name) != 0)
@@ -436,10 +443,19 @@ uint32_t CSettings::FindSetting(CSettings * _this, const char * Name)
             }
             return iter->first;
         }
-        if (Setting->GetSettingType() == SettingType_SelectedDirectory)
+        else if (Setting->GetSettingType() == SettingType_SelectedDirectory)
         {
             CSettingTypeSelectedDirectory * SelectedDirectory = (CSettingTypeSelectedDirectory *)Setting;
             if (_stricmp(SelectedDirectory->GetName(), Name) != 0)
+            {
+                continue;
+            }
+            return iter->first;
+        }
+        else if (Setting->GetSettingType() == SettingType_BoolVariable)
+        {
+            CSettingTypeTempBool * BoolSetting = (CSettingTypeTempBool *)Setting;
+            if (_stricmp(BoolSetting->GetName(), Name) != 0)
             {
                 continue;
             }

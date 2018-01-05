@@ -10,6 +10,7 @@
 ****************************************************************************/
 #pragma once
 
+#include <Common/Random.h>
 #include <Common/SyncEvent.h>
 #include <Common/Thread.h>
 #include <Project64-core/Settings/N64SystemSettings.h>
@@ -48,7 +49,7 @@ class CN64System :
     protected CDebugSettings
 {
 public:
-    CN64System(CPlugins * Plugins, bool SavesReadOnly, bool SyncSystem);
+    CN64System(CPlugins * Plugins, uint32_t randomizer_seed, bool SavesReadOnly, bool SyncSystem);
     virtual ~CN64System(void);
 
     CCheats    m_Cheats;
@@ -67,9 +68,8 @@ public:
     void   ExternalEvent(SystemEvent action); //covers gui interacting and timers etc..
     void   StartEmulation(bool NewThread);
     void   EndEmulation();
-    void   SyncToAudio();
     void   AlterSpeed(const CSpeedLimiter::ESpeedChange SpeedChange) { m_Limiter.AlterSpeed(SpeedChange); }
-    void   SetSpeed(int Speed) { m_Limiter.SetSpeed(Speed);  }
+    void   SetSpeed(int Speed) { m_Limiter.SetSpeed(Speed); }
     int    GetSpeed(void) const { return m_Limiter.GetSpeed(); }
     int    GetBaseSpeed(void) const { return m_Limiter.GetBaseSpeed(); }
     void   Reset(bool bInitReg, bool ClearMenory);
@@ -153,7 +153,6 @@ private:
     int32_t         m_NextTimer;
     CSystemTimer    m_SystemTimer;
     bool            m_bCleanFrameBox;
-    bool            m_bInitialized;
     bool            m_RspBroke;
     bool            m_DMAUsed;
     uint32_t        m_Buttons[4];
@@ -165,6 +164,7 @@ private:
     uint32_t        m_SyncCount;
     bool            m_SyncCpu;
     bool            m_CheatsSlectionChanged;
+    CRandom         m_Random;
 
     //When Syncing cores this is the PC where it last Sync'ed correctly
     uint32_t m_LastSuccessSyncPC[10];

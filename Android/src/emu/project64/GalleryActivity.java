@@ -247,12 +247,6 @@ public class GalleryActivity extends AppCompatActivity implements IabBroadcastLi
             }
         });
         UpdateLanguage();
-
-        ((Project64Application) getApplication()).getDefaultTracker().send(new HitBuilders.EventBuilder()
-                .setCategory("mobile")
-                .setAction("start")
-                .setLabel(NativeExports.appVersion())
-                .build());
     }
 
     void UpdateLanguage()
@@ -550,7 +544,7 @@ public class GalleryActivity extends AppCompatActivity implements IabBroadcastLi
 
         final Context finalContext = this;
         AlertDialog.Builder GameMenu = new AlertDialog.Builder(finalContext);
-        GameMenu.setTitle(NativeExports.SettingsLoadString(SettingsID.Game_GoodName.getValue()));
+        GameMenu.setTitle(NativeExports.SettingsLoadString(SettingsID.Rdb_GoodName.getValue()));
         GameMenu.setAdapter(adapter, new DialogInterface.OnClickListener()
         {
             @Override
@@ -839,6 +833,11 @@ public class GalleryActivity extends AppCompatActivity implements IabBroadcastLi
 
     public void ShowSupportWindow(final Boolean ResumeGame)
     {
+        ((Project64Application) getApplication()).getDefaultTracker().send(new HitBuilders.EventBuilder()
+            .setCategory("Patreon Window")
+            .setLabel(NativeExports.appVersion())
+            .build());
+
         Boolean TimeDelayed = NativeExports.UISettingsLoadDword(UISettingID.Game_RunCount.getValue()) > 15;
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -917,6 +916,10 @@ public class GalleryActivity extends AppCompatActivity implements IabBroadcastLi
             @Override
             public void onClick(View v)
             {
+                ((Project64Application) getApplication()).getDefaultTracker().send(new HitBuilders.EventBuilder()
+                    .setCategory("Patreon page")
+                    .setLabel(NativeExports.appVersion())
+                    .build());
                 Intent browse = new Intent( Intent.ACTION_VIEW , Uri.parse( "https://www.patreon.com/bePatron?u=841905" ) );
                 startActivity( browse );
             }
@@ -929,8 +932,8 @@ public class GalleryActivity extends AppCompatActivity implements IabBroadcastLi
         if (ResumeGame)
         {
             NativeExports.SettingsSaveDword(SettingsID.Game_CurrentSaveState.getValue(), 0);
-            NativeExports.ExternalEvent(SystemEvent.SysEvent_LoadMachineState.getValue());
         }
+        NativeExports.SettingsSaveBool(SettingsID.Game_LoadSaveAtStart.getValue(), ResumeGame);
         // Launch the game activity
         boolean isXperiaPlay = false;
 
