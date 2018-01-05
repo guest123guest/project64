@@ -100,6 +100,7 @@
     <ClCompile Include="UserInterface\Debugger\ScriptInstance.cpp" />
     <ClCompile Include="UserInterface\Debugger\ScriptSystem.cpp" />
     <ClCompile Include="UserInterface\Debugger\Symbols.cpp" />
+    <ClCompile Include="UserInterface\EnhancementUI.cpp" />
     <ClCompile Include="UserInterface\GuiClass.cpp" />
     <ClCompile Include="UserInterface\LoggingUI.cpp" />
     <ClCompile Include="UserInterface\MainMenuClass.cpp" />
@@ -162,6 +163,7 @@
     <ClInclude Include="UserInterface\Debugger\ScriptSystem.h" />
     <ClInclude Include="UserInterface\Debugger\stdafx.h" />
     <ClInclude Include="UserInterface\Debugger\Symbols.h" />
+    <ClInclude Include="UserInterface\EnhancementUI.h" />
     <ClInclude Include="UserInterface\GuiClass.h" />
     <ClInclude Include="UserInterface\LoggingUI.h" />
     <ClInclude Include="UserInterface\MainMenuClass.h" />

@@ -216,6 +216,9 @@
     <ClCompile Include="UserInterface\WTLControls\EditNumber32.cpp">
       <Filter>Source Files\User Interface Source\WTL Controls Source</Filter>
     </ClCompile>
+    <ClCompile Include="UserInterface\EnhancementUI.cpp">
+      <Filter>Source Files\User Interface Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="UserInterface\resource.h">
@@ -412,6 +415,9 @@
     </ClInclude>
     <ClInclude Include="UserInterface\WTLControls\EditNumber32.h">
       <Filter>Header Files\User Interface Headers\WTL Controls Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="UserInterface\EnhancementUI.h">
+      <Filter>Header Files\User Interface Headers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
